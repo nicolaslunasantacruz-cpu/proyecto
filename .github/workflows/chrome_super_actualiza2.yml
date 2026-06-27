@@ -1,6 +1,10 @@
 name: Navegador Chrome Pro (Modo Chile)
+
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   run-browser:
@@ -15,7 +19,6 @@ jobs:
           echo "INSTALANDO GOOGLE CHROME ACTUALIZADO..."
           echo "=========================================================="
           
-          # Esperar un par de segundos a que el contenedor esté completamente operativo
           sleep 5
 
           # 2. Instala Chrome, lo reconfigura para root y preinstala extensiones
