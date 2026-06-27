@@ -10,7 +10,7 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Preparar Entorno Chile Todo Incluido (Tradicional)
+      - name: Preparar Entorno Chile Antibloqueos
         run: |
           # 1. Levanta el escritorio virtual liviano con memoria ampliada
           docker run -d -p 6080:80 --shm-size=2gb --security-opt seccomp=unconfined dorowu/ubuntu-desktop-lxde-vnc
@@ -21,7 +21,7 @@ jobs:
           
           sleep 5
 
-          # 2. Instala Chrome para Root y configura extensiones (Urban VPN y User-Agent)
+          # 2. Instala Chrome para Root y preinstala de forma forzada Urban VPN y User-Agent Switcher
           docker exec $(docker ps -q) sh -c "
             apt-get update -y || true &&
             apt-get install -y wget gdebi-core &&
@@ -36,7 +36,7 @@ jobs:
           echo "SISTEMA LISTO. ACTIVANDO ENLACE CLOUDFLARE..."
           echo "=========================================================="
 
-          # 3. Descarga e inicio del túnel Cloudflare clásico (HTTP simple)
+          # 3. Descarga e inicio del túnel Cloudflare
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
           chmod +x cloudflared
 
