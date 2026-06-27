@@ -10,19 +10,24 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Preparar Entorno de Alto Rendimiento con Audio Nativo
+      - name: Preparar Entorno Chile Todo Incluido (Tradicional)
         run: |
-          # 1. Levantamos el contenedor con entorno gráfico y soporte de audio nativo por web
-          docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.15.0
+          # 1. Levanta el escritorio virtual liviano con memoria ampliada
+          docker run -d -p 6080:80 --shm-size=2gb --security-opt seccomp=unconfined dorowu/ubuntu-desktop-lxde-vnc
 
           echo "=========================================================="
-          echo "CONFIGURANDO EXTENSIONES Y REGLAS EN CHROME..."
+          echo "INSTALANDO GOOGLE CHROME ACTUALIZADO..."
           echo "=========================================================="
           
-          sleep 12
+          sleep 5
 
-          # 2. Inyectamos las extensiones (Urban VPN y User-Agent) mediante las políticas administradas
-          docker exec -u root $(docker ps -q) sh -c "
+          # 2. Instala Chrome para Root y configura extensiones (Urban VPN y User-Agent)
+          docker exec $(docker ps -q) sh -c "
+            apt-get update -y || true &&
+            apt-get install -y wget gdebi-core &&
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb &&
+            gdebi -n google-chrome-stable_current_amd64.deb &&
+            sed -i 's/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\"/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\" --no-sandbox --user-data-dir --disable-gpu/g' /opt/google/chrome/google-chrome &&
             mkdir -p /etc/opt/chrome/policies/managed &&
             echo '{\"ExtensionInstallForcelist\": [\"eppiocemhmnbneldhgflamieenbbgcko;https://clients2.google.com/service/update2/crx\", \"djflhoibgkdhocackgohgcaadenmccno;https://clients2.google.com/service/update2/crx\"]}' > /etc/opt/chrome/policies/managed/extensions.json
           "
@@ -31,9 +36,8 @@ jobs:
           echo "SISTEMA LISTO. ACTIVANDO ENLACE CLOUDFLARE..."
           echo "=========================================================="
 
-          # 3. Descarga Cloudflare
+          # 3. Descarga e inicio del túnel Cloudflare clásico (HTTP simple)
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
           chmod +x cloudflared
 
-          # 4. Genera el enlace público forzando el protocolo HTTPS y desactivando la verificación estricta de TLS
-          ./cloudflared tunnel --no-tls-verify --url https://localhost:6080
+          ./cloudflared tunnel --url http://localhost:6080
