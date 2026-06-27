@@ -12,14 +12,14 @@ jobs:
     steps:
       - name: Preparar Entorno de Alto Rendimiento con Audio Nativo
         run: |
-          # 1. Levantamos un contenedor moderno con entorno gráfico y soporte de audio nativo por web
+          # 1. Levantamos el contenedor con entorno gráfico y soporte de audio nativo por web
           docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.15.0
 
           echo "=========================================================="
           echo "CONFIGURANDO EXTENSIONES Y REGLAS EN CHROME..."
           echo "=========================================================="
           
-          sleep 10
+          sleep 12
 
           # 2. Inyectamos las extensiones (Urban VPN y User-Agent) mediante las políticas administradas
           docker exec -u root $(docker ps -q) sh -c "
@@ -35,5 +35,5 @@ jobs:
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
           chmod +x cloudflared
 
-          # 4. Genera el enlace de acceso público apuntando al puerto de Kasm
-          ./cloudflared tunnel --url http://localhost:6080
+          # 4. Genera el enlace público forzando el protocolo HTTPS y desactivando la verificación estricta de TLS
+          ./cloudflared tunnel --no-tls-verify --url https://localhost:6080
