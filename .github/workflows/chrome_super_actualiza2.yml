@@ -15,25 +15,25 @@ jobs:
           echo "=========================================================="
           echo "LEVANTANDO CONTENEDOR UBUNTU LINUX MODERNO..."
           echo "=========================================================="
-          # 1. Levantamos una imagen oficial y moderna de Ubuntu (sin bloqueos internos) con puerto web VNC 6080
-          docker run -d -p 6080:6080 --shm-size=2gb --security-opt seccomp=unconfined accetto/ubuntu-vnc-xfce-g3-chromium:latest
+          # 1. Levantamos la imagen oficial de Kasm Ubuntu (Puerto interno 6901 mapeado al 6080 de Cloudflare)
+          docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/core-ubuntu-noble:1.16.0
 
           echo "=========================================================="
           echo "INSTALANDO GOOGLE CHROME OFICIAL Y LIBRERÍAS DE RED..."
           echo "=========================================================="
-          sleep 10
+          sleep 12
 
-          # 2. Instalamos el Google Chrome estable oficial junto con dbus y componentes para procesar Captchas
+          # 2. Instalamos Google Chrome estable oficial junto con las dependencias necesarias para los Captchas de Meta/Google
           docker exec -u root $(docker ps -q) sh -c "
             apt-get update -y &&
-            apt-get install -y wget gdebi-core dbus-x11 libgbm1 libasound2t64 || apt-get install -y wget gdebi-core dbus-x11 libgbm1 libasound2 &&
+            apt-get install -y wget gdebi-core dbus-x11 libgbm1 xauth x11-xserver-utils &&
             wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb &&
             gdebi -n google-chrome-stable_current_amd64.deb &&
             
-            # Reconfiguramos el inicio de Chrome anulando por completo la detección de automatización (evita bucles de Captcha)
+            # Configuramos el inicio de Chrome anulando la detección de automatización (evita bucles de Captcha)
             sed -i 's/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\"/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\" --no-sandbox --user-data-dir --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --disable-blink-features=AutomationControlled --ignore-certificate-errors/g' /opt/google/chrome/google-chrome &&
             
-            # Forzamos la preinstalación limpia de Urban VPN y User-Agent Switcher
+            # Forzamos la instalación limpia de Urban VPN y User-Agent Switcher
             mkdir -p /etc/opt/chrome/policies/managed &&
             echo '{\"ExtensionInstallForcelist\": [\"eppiocemhmnbneldhgflamieenbbgcko;https://clients2.google.com/service/update2/crx\", \"djflhoibgkdhocackgohgcaadenmccno;https://clients2.google.com/service/update2/crx\"]}' > /etc/opt/chrome/policies/managed/extensions.json
           "
@@ -45,5 +45,5 @@ jobs:
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
           chmod +x cloudflared
 
-          # 4. Levantamos el túnel hacia la interfaz web de Linux
-          ./cloudflared tunnel --url http://localhost:6080
+          # 4. Levantamos el túnel forzando HTTPS y omitiendo verificación SSL interna (requerido por Kasm)
+          ./cloudflared tunnel --no-tls-verify --url https://localhost:6080
