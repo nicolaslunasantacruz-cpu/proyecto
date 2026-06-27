@@ -1,0 +1,65 @@
+Navegador Chrome Pro (Modo Chile)
+on:
+workflow_dispatch:
+jobs:
+run-browser:
+runs-on: ubuntu-latest
+steps:
+- name: Preparar Entorno Chile Todo Incluido
+run: |
+# 1. Levanta el escritorio virtual con memoria compartida
+
+expandida a 2GB
+
+docker run -d -p 6080:80 --shm-size=2gb --security-opt
+
+seccomp=unconfined dorowu/ubuntu-desktop-lxde-vnc
+
+echo
+
+"=========================================================="
+echo "INSTALANDO GOOGLE CHROME ACTUALIZADO..."
+echo
+
+"=========================================================="
+# 2. Instala Chrome, lo reconfigura para root y le
+preinstala extensiones (Urban VPN y User-Agent Switcher)
+
+docker exec $(docker ps -q) sh -c "
+apt-get update -y || true &&
+
+apt-get install -y wget gdebi-core &&
+wget -q
+
+https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.
+deb &&
+
+gdebi --n google-chrome-stable_current_amd64.deb &&
+sed -i 's/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\"/exec
+-a \"\$0\" \"\$HERE\/chrome\" \"\$@\" --no-sandbox --user-data-dir
+--disable-gpu/g' /opt/google/chrome/google-chrome &&
+mkdir -p /etc/opt/chrome/policies/managed &&
+echo '{\"ExtensionInstallForcelist\":
+
+[\"eppiocemhmnbneldhgflamieenbbgcko;https://clients2.google.com/servic
+e/update2/crx\",
+\"djflhoibgkdhocackgohgcaadenmccno;https://clients2.google.com/service
+/update2/crx\"]}' > /etc/opt/chrome/policies/managed/extensions.json
+
+"
+echo
+
+"=========================================================="
+echo "SISTEMA LISTO. ACTIVANDO ENLACE CLOUDFLARE..."
+echo
+
+"=========================================================="
+
+# 3. Descarga Cloudflare
+curl -L
+
+https://github.com/cloudflare/cloudflared/releases/latest/download/clo
+udflared-linux-amd64 -o cloudflared
+chmod +x cloudflared
+# 4. Genera el enlace de acceso público
+./cloudflared tunnel --url http://localhost:6080
