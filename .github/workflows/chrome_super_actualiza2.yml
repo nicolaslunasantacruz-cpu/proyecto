@@ -10,24 +10,30 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Preparar Entorno Chile Antibloqueos Completo
+      - name: Levantar Entorno Linux Profesional de Alta Compatibilidad
         run: |
-          # 1. Levanta el escritorio virtual liviano con memoria ampliada
-          docker run -d -p 6080:80 --shm-size=2gb --security-opt seccomp=unconfined dorowu/ubuntu-desktop-lxde-vnc
+          echo "=========================================================="
+          echo "LEVANTANDO CONTENEDOR UBUNTU LINUX MODERNO..."
+          echo "=========================================================="
+          # 1. Levantamos una imagen oficial y moderna de Ubuntu (sin bloqueos internos) con puerto web VNC 6080
+          docker run -d -p 6080:6080 --shm-size=2gb --security-opt seccomp=unconfined accetto/ubuntu-vnc-xfce-g3-chromium:latest
 
           echo "=========================================================="
-          echo "INSTALANDO GOOGLE CHROME ACTUALIZADO..."
+          echo "INSTALANDO GOOGLE CHROME OFICIAL Y LIBRERÍAS DE RED..."
           echo "=========================================================="
-          
-          sleep 5
+          sleep 10
 
-          # 2. Instala Chrome e introduce los modificadores para evadir la detección de automatización/bucles
-          docker exec $(docker ps -q) sh -c "
-            apt-get update -y || true &&
-            apt-get install -y wget gdebi-core &&
+          # 2. Instalamos el Google Chrome estable oficial junto con dbus y componentes para procesar Captchas
+          docker exec -u root $(docker ps -q) sh -c "
+            apt-get update -y &&
+            apt-get install -y wget gdebi-core dbus-x11 libgbm1 libasound2t64 || apt-get install -y wget gdebi-core dbus-x11 libgbm1 libasound2 &&
             wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb &&
             gdebi -n google-chrome-stable_current_amd64.deb &&
-            sed -i 's/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\"/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\" --no-sandbox --user-data-dir --disable-gpu --disable-blink-features=AutomationControlled --ignore-certificate-errors --pgo-kind=none/g' /opt/google/chrome/google-chrome &&
+            
+            # Reconfiguramos el inicio de Chrome anulando por completo la detección de automatización (evita bucles de Captcha)
+            sed -i 's/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\"/exec -a \"\$0\" \"\$HERE\/chrome\" \"\$@\" --no-sandbox --user-data-dir --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --disable-blink-features=AutomationControlled --ignore-certificate-errors/g' /opt/google/chrome/google-chrome &&
+            
+            # Forzamos la preinstalación limpia de Urban VPN y User-Agent Switcher
             mkdir -p /etc/opt/chrome/policies/managed &&
             echo '{\"ExtensionInstallForcelist\": [\"eppiocemhmnbneldhgflamieenbbgcko;https://clients2.google.com/service/update2/crx\", \"djflhoibgkdhocackgohgcaadenmccno;https://clients2.google.com/service/update2/crx\"]}' > /etc/opt/chrome/policies/managed/extensions.json
           "
@@ -35,9 +41,9 @@ jobs:
           echo "=========================================================="
           echo "SISTEMA LISTO. ACTIVANDO ENLACE CLOUDFLARE..."
           echo "=========================================================="
-
-          # 3. Descarga e inicio del túnel Cloudflare
+          # 3. Descargamos la última versión del cliente de Cloudflare
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
           chmod +x cloudflared
 
+          # 4. Levantamos el túnel hacia la interfaz web de Linux
           ./cloudflared tunnel --url http://localhost:6080
