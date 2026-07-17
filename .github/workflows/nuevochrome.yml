@@ -13,10 +13,10 @@ jobs:
       - name: Levantar Escritorio Virtual Clásico con Audio Nativo
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO UBUNTU CON AUDIO..."
+          echo "LEVANTANDO ENTORNO CHROMIUM CON AUDIO OFICIAL..."
           echo "=========================================================="
-          # Usamos la imagen oficial de Conetix que incluye escritorio virtual y audio por web nativo
-          docker run -d -p 8080:80 --shm-size=2gb --name=desktop conetix/vnc-chromium
+          # Usamos la imagen oficial y mantenida de Selenium que incluye noVNC y audio sobre HTTP
+          docker run -d -p 8080:4444 --shm-size=2gb --name=desktop seleniarm/standalone-chromium
 
           echo "=========================================================="
           echo "ESPERANDO QUE EL SISTEMA INICIE..."
@@ -30,7 +30,7 @@ jobs:
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-          # Lanzamos el túnel directo al puerto del escritorio clásico (8080)
+          # Lanzamos el túnel directo al puerto del escritorio (8080)
           cloudflared tunnel --url http://localhost:8080 --no-tls-verify &
 
           sleep 10
