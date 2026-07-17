@@ -1,5 +1,4 @@
-name: Navegador Chrome Pro (Modo Chile)
-
+name: Nuevo chrome
 on:
   workflow_dispatch:
   push:
@@ -15,10 +14,11 @@ jobs:
           echo "=========================================================="
           echo "LEVANTANDO CONTENEDOR KASM CHROME PROFESIONAL..."
           echo "=========================================================="
+          # Levantamos Kasm Chrome
           docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.16.0
 
           echo "=========================================================="
-          echo "CONFIGURANDO POLÍTICAS ANTI-CAPTCHA Y EXTENSIONES..."
+          echo "CONFIGURANDO POLÍTICAS ANTI-CAPTCHA AND EXTENSIONES..."
           echo "=========================================================="
           sleep 8
 
@@ -34,23 +34,25 @@ jobs:
           "
 
           echo "=========================================================="
-          echo "ACTIVANDO ENLACE REMOTO ULTRA-ESTABLE CON NGROK..."
+          echo "INSTALANDO Y ACTIVANDO TÚNEL SEGURO CON NGROK..."
           echo "=========================================================="
-          # 1. Instalamos Ngrok de forma oficial
+          # 1. Instalamos el agente oficial de Ngrok
           curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
           echo "deb https://ngrok-agent.s3.amazonaws.com/ buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
           sudo apt-get update && sudo apt-get install ngrok -y
 
-          # 2. Levantamos el túnel de Ngrok apuntando directamente al protocolo HTTPS interno de Kasm
-          # Usamos la API pública y directa para que no pida token de cuenta obligatoria
+          # 2. Iniciamos el túnel apuntando al HTTPS interno que requiere Kasm
+          # Usamos el esquema de túneles rápidos de Ngrok
           ngrok http https://localhost:6080 --schemes=https &
           
-          # 3. Esperamos a que Ngrok inicie y extraemos el enlace de su API interna para mostrártelo en pantalla
+          # 3. Esperamos a que conecte y extraemos tu URL limpia de acceso
           sleep 5
+          echo ""
           echo "=========================================================="
-          echo "TU ENLACE DE ACCESO ES:"
+          echo "TU NUEVO ENLACE DE ACCESO REMOTO ES:"
           curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | grep -o 'https://.*'
           echo "=========================================================="
+          echo ""
           
-          # Mantenemos el flujo vivo para que no se cierre
+          # Mantenemos vivo el servidor de GitHub Actions para que trabajes tranquilo
           sleep 21600
