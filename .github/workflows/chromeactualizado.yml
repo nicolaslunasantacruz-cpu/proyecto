@@ -1,0 +1,48 @@
+name: Nuevo Chrome con Audio y KasmVNC
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Levantar Escritorio Virtual con Chrome Moderno y Audio
+        run: |
+          echo "=========================================================="
+          echo "LEVANTANDO ENTORNO UBUNTU VISUAL CON KASMVNC..."
+          echo "=========================================================="
+          
+          # Levantamos el contenedor oficial de Kasm con Chrome moderno.
+          # Kasm expone su interfaz web segura y con audio en el puerto 6901 por defecto.
+          docker run -d \
+            -p 8443:6901 \
+            --shm-size=2gb \
+            --name=desktop \
+            -e VNC_PW=password \
+            kasmweb/chrome:1.15.0
+
+          echo "=========================================================="
+          echo "ESPERANDO QUE EL SISTEMA INICIE..."
+          echo "=========================================================="
+          sleep 15
+
+          echo "=========================================================="
+          echo "ACTIVANDO TÚNEL AUTOMÁTICO DE CLOUDFLARE..."
+          echo "=========================================================="
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+          # Apuntamos al puerto 8443. Usamos --no-tls-verify porque Kasm usa HTTPS auto-firmado internamente
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify &
+
+          echo "=========================================================="
+          echo "ESPERANDO ENLACE DE TRYCLOUDFLARE..."
+          echo "=========================================================="
+          sleep 10
+          
+          # Mantener vivo el entorno (límite seguro antes del timeout de 6 horas de GitHub)
+          sleep 21000
