@@ -13,11 +13,10 @@ jobs:
       - name: Levantar Escritorio Virtual Clásico con Audio Nativo
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO UBUNTU CON AUDIO WEB SIMULTÁNEO..."
+          echo "LEVANTANDO ENTORNO UBUNTU CON AUDIO..."
           echo "=========================================================="
-          # Usamos una imagen optimizada que expone el escritorio en el 80 y el audio en el 8000
-          docker run -d -p 8080:80 -p 8000:8000 --shm-size=2gb --privileged mikefarah/yq:latest sleep infinity || true
-          docker run -d -p 8080:80 -p 8000:8000 --shm-size=2gb --name=desktop -e RESOLUTION=1280x720 tiratoni/ubuntu-xpack:latest
+          # Levantamos el contenedor definitivo con Chrome y Audio Web integrado (Puertos 6080 y 6901)
+          docker run -d -p 8080:6901 --shm-size=2gb --name=desktop -e VNC_PW=password accetto/ubuntu-vnc-xfce-g3-chromium
 
           echo "=========================================================="
           echo "ESPERANDO QUE EL SISTEMA INICIE..."
@@ -25,21 +24,18 @@ jobs:
           sleep 12
 
           echo "=========================================================="
-          echo "ACTIVANDO TÚNELES AUTOMÁTICOS DE CLOUDFLARE..."
+          echo "ACTIVANDO TÚNEL AUTOMÁTICO DE CLOUDFLARE..."
           echo "=========================================================="
           # Descargamos la herramienta oficial de Cloudflare
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-          # Lanzamos un túnel para la Pantalla (Puerto 8080)
+          # Lanzamos el túnel directo al puerto del escritorio clásico (8080)
           cloudflared tunnel --url http://localhost:8080 --no-tls-verify &
-          
-          # Lanzamos otro túnel para el Audio (Puerto 8000)
-          cloudflared tunnel --url http://localhost:8000 --no-tls-verify &
 
           sleep 10
           echo "=========================================================="
-          echo "BUSCA TUS DOS ENLACES DE TRYCLOUDFLARE ABAJO:"
+          echo "BUSCA TU ENLACE DE TRYCLOUDFLARE ABAJO:"
           echo "=========================================================="
           
           # Mantenemos vivo el flujo de GitHub Actions
