@@ -36,22 +36,21 @@ jobs:
           "
 
           echo "=========================================================="
-          echo "INSTALANDO Y ACTIVANDO TÚNEL SEGURO CON NGROK..."
+          echo "ACTIVANDO TÚNEL SEGURO CON PINGGY (SIN COMPLICACIONES)..."
           echo "=========================================================="
-          # 1. Instalamos el agente oficial de Ngrok compatible con Ubuntu Latest
-          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-          echo "deb https://ngrok-agent.s3.amazonaws.com/ buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-          sudo apt-get update && sudo apt-get install ngrok -y
-
-          # 2. Iniciamos el túnel apuntando al HTTPS de Kasm sin la bandera obsoleta (--schemes)
-          ngrok http https://localhost:6080 &
+          # Creamos un archivo intermedio para capturar y mostrar tu URL limpia en la pantalla de logs
+          touch url.txt
           
-          # 3. Esperamos a que Ngrok asigne la URL y la extraemos para mostrártela en pantalla
-          sleep 5
-          echo ""
+          # Iniciamos el túnel SSH seguro apuntando al puerto HTTPS local de Kasm (6080)
+          # Pasamos los parámetros necesarios para ignorar el SSL interno y evitar el prompt manual de SSH
+          ssh -p 443 -R0:localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
+          
+          # Esperamos a que el puente se sincronice bien con el servidor remoto
+          sleep 6
+          
           echo "=========================================================="
           echo "TU NUEVO ENLACE DE ACCESO REMOTO ES:"
-          curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*' | grep -o 'https://.*'
+          grep -o 'https://[^ ]*\.pinggy\.link' url.txt | head -n 1
           echo "=========================================================="
           echo ""
           
