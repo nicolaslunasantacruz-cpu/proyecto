@@ -15,8 +15,8 @@ jobs:
           echo "=========================================================="
           echo "LEVANTANDO ENTORNO UBUNTU CON AUDIO..."
           echo "=========================================================="
-          # Levantamos el contenedor definitivo con Chrome y Audio Web integrado (Puertos 6080 y 6901)
-          docker run -d -p 8080:6901 --shm-size=2gb --name=desktop -e VNC_PW=password accetto/ubuntu-vnc-xfce-g3-chromium
+          # Usamos la imagen oficial de Conetix que incluye escritorio virtual y audio por web nativo
+          docker run -d -p 8080:80 --shm-size=2gb --name=desktop conetix/vnc-chromium
 
           echo "=========================================================="
           echo "ESPERANDO QUE EL SISTEMA INICIE..."
