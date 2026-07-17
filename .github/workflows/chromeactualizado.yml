@@ -16,8 +16,9 @@ jobs:
           echo "LEVANTANDO ENTORNO UBUNTU VISUAL CON KASMVNC..."
           echo "=========================================================="
           
-         # Levantamos el contenedor sin mapear hardware inexistente.
-          # Kasm creará una tarjeta de sonido virtual por software automáticamente.
+          # Levantamos el contenedor oficial de Kasm con Chrome moderno.
+          # Eliminamos --device /dev/snd para evitar el error en los servidores de GitHub.
+          # START_PULSEAUDIO=1 obliga al sistema a crear una tarjeta de sonido virtual interna.
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
@@ -37,13 +38,13 @@ jobs:
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-          # Apuntamos al puerto 8443. Usamos --no-tls-verify porque Kasm usa HTTPS auto-firmado internamente
+          # Apuntamos al puerto 8443. Usamos --no-tls-verify porque Kasm usa HTTPS auto-firmado.
           cloudflared tunnel --url https://localhost:8443 --no-tls-verify &
 
           echo "=========================================================="
-          echo "ESPERANDO ENLACE DE TRYCLOUDFLARE..."
+          echo "BUSCA TU ENLACE DE TRYCLOUDFLARE ABAJO:"
           echo "=========================================================="
           sleep 10
           
-          # Mantener vivo el entorno (límite seguro antes del timeout de 6 horas de GitHub)
+          # Mantenemos vivo el entorno por un límite seguro de casi 6 horas (5.8 horas)
           sleep 21000
