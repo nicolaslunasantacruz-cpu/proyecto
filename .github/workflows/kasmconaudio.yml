@@ -1,0 +1,56 @@
+name: Nuevo Chrome con Audio Real
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Levantar Escritorio Virtual con KasmVNC (Audio Incluido)
+        run: |
+          echo "=========================================================="
+          echo "LEVANTANDO ENTORNO KASM CON AUDIO..."
+          echo "=========================================================="
+          # Usamos la imagen oficial de Kasm con Chrome. 
+          # Esta imagen ya viene optimizada para audio web nativo.
+          docker run -d \
+            -p 8443:6901 \
+            --shm-size=2gb \
+            --name=desktop \
+            -e VNC_PW=password \
+            kasmweb/chrome:1.15.0
+
+          echo "=========================================================="
+          echo "ESPERANDO QUE EL SISTEMA INICIE..."
+          echo "=========================================================="
+          sleep 12
+
+          echo "=========================================================="
+          echo "ACTIVANDO TÚNEL AUTOMÁTICO DE CLOUDFLARE..."
+          echo "=========================================================="
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+          # Apuntamos al puerto 8443 de Kasm. 
+          # Usamos http_status porque Kasm usa HTTPS internamente en el contenedor por defecto.
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
+
+          echo "Esperando a que Cloudflare genere el enlace público..."
+          sleep 10
+
+          echo "=========================================================="
+          echo "¡TU ENLACE ESTÁ LISTO!"
+          echo "=========================================================="
+          grep -o 'https://[^ ]*trycloudflare.com' cloudflare.log || echo "No se pudo encontrar el enlace automáticamente."
+          echo "=========================================================="
+          echo "Credenciales por defecto de Kasm:"
+          echo "Usuario: kasm_user"
+          echo "Contraseña: password"
+          echo "=========================================================="
+          
+          # Mantener vivo por 6 horas
+          sleep 21600
