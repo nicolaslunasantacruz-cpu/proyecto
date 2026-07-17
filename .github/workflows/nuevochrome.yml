@@ -1,0 +1,48 @@
+name: Navegador Chrome Pro (Modo Chile)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Levantar Entorno Linux Profesional de Alta Compatibilidad
+        run: |
+          echo "=========================================================="
+          echo "LEVANTANDO CONTENEDOR KASM CHROME PROFESIONAL..."
+          echo "=========================================================="
+          # 1. Usamos la imagen directa de Chrome de Kasm (más ligera y optimizada anti-bloqueos)
+          # El puerto interno por defecto de Kasm es el 6901
+          docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.16.0
+
+          echo "=========================================================="
+          echo "CONFIGURANDO POLÍTICAS ANTI-CAPTCHA Y EXTENSIONES..."
+          echo "=========================================================="
+          sleep 8
+
+          # 2. Inyectamos las extensiones (Urban VPN y User-Agent) y quitamos banderas de automatización directas en las políticas de Chrome
+          docker exec -u root $(docker ps -q) sh -c "
+            mkdir -p /etc/opt/chrome/policies/managed &&
+            echo '{\
+              \"ExtensionInstallForcelist\": [\
+                \"eppiocemhmnbneldhgflamieenbbgcko;https://clients2.google.com/service/update2/crx\",\
+                \"djflhoibgkdhocackgohgcaadenmccno;https://clients2.google.com/service/update2/crx\"\
+              ],\
+              \"CommandLineFlagSecurityWarningsEnabled\": false\
+            }' > /etc/opt/chrome/policies/managed/extensions.json
+          "
+
+          echo "=========================================================="
+          echo "SISTEMA LISTO. ACTIVANDO ENLACE CLOUDFLARE..."
+          echo "=========================================================="
+          # 3. Descargamos cloudflared
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+          chmod +x cloudflared
+
+          # 4. TRUCO CLAVE: Forzamos el protocolo del túnel para backend HTTPS hacia el puerto mapeado de la máquina virtual (6080)
+          # Usamos --no-tls-verify porque Kasm usa certificados autofirmados localmente.
+          ./cloudflared tunnel --no-tls-verify --url https://127.0.0.1:6080
