@@ -38,14 +38,14 @@ jobs:
           echo "=========================================================="
           touch url.txt
           
-          # CORRECCIÓN: Usamos tls://localhost:6080 para que Pinggy entienda el certificado de Kasm
-          ssh -p 443 -R0:tls://localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
+          # Sintaxis SSH estándar compatible: reenvía el puerto directo y pasamos la configuración en la conexión web
+          ssh -p 443 -R0:localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
           
           sleep 12
           
           echo "=========================================================="
-          echo "TU NUEVO ENLACE DE ACCESO REMOTO ES:"
-          # Extraemos directamente la URL segura de los logs
+          echo "TU ENLACE DE ACCESO REMOTO ES:"
+          # Buscamos las URLs generadas en el archivo
           grep -o 'https://[^ ]*\.link' url.txt | head -n 1
           echo "=========================================================="
           echo ""
