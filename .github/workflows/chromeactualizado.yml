@@ -16,13 +16,15 @@ jobs:
           echo "LEVANTANDO ENTORNO UBUNTU VISUAL CON KASMVNC..."
           echo "=========================================================="
           
-          # Levantamos el contenedor oficial de Kasm con Chrome moderno.
-          # Kasm expone su interfaz web segura y con audio en el puerto 6901 por defecto.
+          # Levantamos el contenedor forzando la creación de dispositivos de audio virtuales
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
             --name=desktop \
+            --device /dev/snd \
             -e VNC_PW=password \
+            -e START_PULSEAUDIO=1 \
+            -e AUDIO_PORT=8443 \
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
