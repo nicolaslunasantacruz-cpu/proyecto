@@ -1,4 +1,4 @@
-name: Nuevo Chrome
+name: Nuevo Chrome con Audio
 
 on:
   workflow_dispatch:
@@ -10,47 +10,37 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Entorno Linux Profesional de Alta Compatibilidad
+      - name: Levantar Escritorio Virtual Clásico con Audio Nativo
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO CONTENEDOR KASM CHROME PROFESIONAL..."
+          echo "LEVANTANDO ENTORNO UBUNTU CON AUDIO WEB SIMULTÁNEO..."
           echo "=========================================================="
-          docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.16.0
+          # Usamos una imagen optimizada que expone el escritorio en el 80 y el audio en el 8000
+          docker run -d -p 8080:80 -p 8000:8000 --shm-size=2gb --privileged mikefarah/yq:latest sleep infinity || true
+          docker run -d -p 8080:80 -p 8000:8000 --shm-size=2gb --name=desktop -e RESOLUTION=1280x720 tiratoni/ubuntu-xpack:latest
 
           echo "=========================================================="
-          echo "CONFIGURANDO POLÍTICAS ANTI-CAPTCHA Y EXTENSIONES..."
+          echo "ESPERANDO QUE EL SISTEMA INICIE..."
           echo "=========================================================="
-          sleep 8
-
-          docker exec -u root $(docker ps -q) sh -c "
-            mkdir -p /etc/opt/chrome/policies/managed &&
-            echo '{\
-              \"ExtensionInstallForcelist\": [\
-                \"eppiocemhmnbneldhgflamieenbbgcko;https://clients2.google.com/service/update2/crx\",\
-                \"djflhoibgkdhocackgohgcaadenmccno;https://clients2.google.com/service/update2/crx\"\
-              ],\
-              \"CommandLineFlagSecurityWarningsEnabled\": false\
-            }' > /etc/opt/chrome/policies/managed/extensions.json
-          "
-
-          echo "=========================================================="
-          echo "ACTIVANDO TÚNEL SEGURO CON PINGGY..."
-          echo "=========================================================="
-          touch url.txt
-          
-          # Sintaxis SSH estándar compatible: reenvía el puerto directo y pasamos la configuración en la conexión web
-          ssh -p 443 -R0:localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
-          
           sleep 12
-          
+
           echo "=========================================================="
-          echo "TU ENLACE DE ACCESO REMOTO ES:"
-          # Buscamos las URLs generadas en el archivo
-          grep -o 'https://[^ ]*\.link' url.txt | head -n 1
+          echo "ACTIVANDO TÚNELES AUTOMÁTICOS DE CLOUDFLARE..."
           echo "=========================================================="
-          echo ""
+          # Descargamos la herramienta oficial de Cloudflare
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+          # Lanzamos un túnel para la Pantalla (Puerto 8080)
+          cloudflared tunnel --url http://localhost:8080 --no-tls-verify &
           
-          echo "Detalles de conexión en bruto:"
-          cat url.txt
+          # Lanzamos otro túnel para el Audio (Puerto 8000)
+          cloudflared tunnel --url http://localhost:8000 --no-tls-verify &
+
+          sleep 10
+          echo "=========================================================="
+          echo "BUSCA TUS DOS ENLACES DE TRYCLOUDFLARE ABAJO:"
+          echo "=========================================================="
           
+          # Mantenemos vivo el flujo de GitHub Actions
           sleep 21600
