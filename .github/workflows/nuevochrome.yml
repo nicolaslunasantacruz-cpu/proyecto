@@ -15,7 +15,6 @@ jobs:
           echo "=========================================================="
           echo "LEVANTANDO CONTENEDOR KASM CHROME PROFESIONAL..."
           echo "=========================================================="
-          # Levantamos el contenedor oficial de Kasm Chrome optimizado para navegación remota
           docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.16.0
 
           echo "=========================================================="
@@ -23,7 +22,6 @@ jobs:
           echo "=========================================================="
           sleep 8
 
-          # Forzamos la instalación de las extensiones (Urban VPN y User-Agent) de forma limpia
           docker exec -u root $(docker ps -q) sh -c "
             mkdir -p /etc/opt/chrome/policies/managed &&
             echo '{\
@@ -36,23 +34,25 @@ jobs:
           "
 
           echo "=========================================================="
-          echo "ACTIVANDO TÚNEL SEGURO CON PINGGY (SIN COMPLICACIONES)..."
+          echo "ACTIVANDO TÚNEL SEGURO CON PINGGY..."
           echo "=========================================================="
-          # Creamos un archivo intermedio para capturar y mostrar tu URL limpia en la pantalla de logs
           touch url.txt
           
-          # Iniciamos el túnel SSH seguro apuntando al puerto HTTPS local de Kasm (6080)
-          # Pasamos los parámetros necesarios para ignorar el SSL interno y evitar el prompt manual de SSH
+          # Levantamos el túnel redirigiendo la salida
           ssh -p 443 -R0:localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
           
-          # Esperamos a que el puente se sincronice bien con el servidor remoto
-          sleep 6
+          # TRUCO: Le damos 12 segundos completos para que negocie la conexión SSH y asigne el subdominio
+          sleep 12
           
           echo "=========================================================="
           echo "TU NUEVO ENLACE DE ACCESO REMOTO ES:"
-          grep -o 'https://[^ ]*\.pinggy\.link' url.txt | head -n 1
+          # Buscamos la URL generada en el archivo de texto
+          cat url.txt | grep -o 'https://[^ ]*\.pinggy\.link' | head -n 1
           echo "=========================================================="
           echo ""
           
-          # Mantenemos vivo el flujo de GitHub Actions para que puedas trabajar sin que se cierre
+          # Imprimimos todo el archivo por si acaso necesitas revisar algún detalle extra
+          echo "Detalles de conexión:"
+          cat url.txt
+          
           sleep 21600
