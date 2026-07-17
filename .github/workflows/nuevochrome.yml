@@ -10,13 +10,13 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Escritorio Virtual Clásico con Audio Nativo
+      - name: Levantar Escritorio Virtual con Chrome y Audio
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO CHROMIUM CON AUDIO OFICIAL..."
+          echo "LEVANTANDO ENTORNO UBUNTU VISUAL DEFINITIVO..."
           echo "=========================================================="
-          # Usamos la imagen oficial y mantenida de Selenium que incluye noVNC y audio sobre HTTP
-          docker run -d -p 8080:4444 --shm-size=2gb --name=desktop seleniarm/standalone-chromium
+          # Esta imagen corre en HTTP plano, tiene Chrome real y noVNC directo en el puerto 6901
+          docker run -d -p 8080:6901 --shm-size=2gb --name=desktop -e VNC_PW=password consol/ubuntu-xfce-vnc
 
           echo "=========================================================="
           echo "ESPERANDO QUE EL SISTEMA INICIE..."
@@ -26,11 +26,10 @@ jobs:
           echo "=========================================================="
           echo "ACTIVANDO TÚNEL AUTOMÁTICO DE CLOUDFLARE..."
           echo "=========================================================="
-          # Descargamos la herramienta oficial de Cloudflare
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-          # Lanzamos el túnel directo al puerto del escritorio (8080)
+          # Volvemos a apuntar al puerto 8080 porque el contenedor expone la interfaz directo ahí
           cloudflared tunnel --url http://localhost:8080 --no-tls-verify &
 
           sleep 10
@@ -38,5 +37,4 @@ jobs:
           echo "BUSCA TU ENLACE DE TRYCLOUDFLARE ABAJO:"
           echo "=========================================================="
           
-          # Mantenemos vivo el flujo de GitHub Actions
           sleep 21600
