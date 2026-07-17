@@ -15,8 +15,6 @@ jobs:
           echo "=========================================================="
           echo "LEVANTANDO CONTENEDOR KASM CHROME PROFESIONAL..."
           echo "=========================================================="
-          # 1. Usamos la imagen directa de Chrome de Kasm (más ligera y optimizada anti-bloqueos)
-          # El puerto interno por defecto de Kasm es el 6901
           docker run -d -p 6080:6901 --shm-size=2gb --security-opt seccomp=unconfined -e VNC_PW=password kasmweb/chrome:1.16.0
 
           echo "=========================================================="
@@ -24,7 +22,6 @@ jobs:
           echo "=========================================================="
           sleep 8
 
-          # 2. Inyectamos las extensiones (Urban VPN y User-Agent) y quitamos banderas de automatización directas en las políticas de Chrome
           docker exec -u root $(docker ps -q) sh -c "
             mkdir -p /etc/opt/chrome/policies/managed &&
             echo '{\
@@ -37,12 +34,15 @@ jobs:
           "
 
           echo "=========================================================="
-          echo "SISTEMA LISTO. ACTIVANDO ENLACE CLOUDFLARE..."
+          echo "SISTEMA LISTO. OBTENIENDO IP PÚBLICA DE RESPALDO..."
           echo "=========================================================="
-          # 3. Descargamos cloudflared
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-          chmod +x cloudflared
-
-          # 4. TRUCO CLAVE: Forzamos el protocolo del túnel para backend HTTPS hacia el puerto mapeado de la máquina virtual (6080)
-          # Usamos --no-tls-verify porque Kasm usa certificados autofirmados localmente.
-          ./cloudflared tunnel --no-tls-verify --url https://127.0.0.1:6080
+          # Guardamos la IP pública del servidor de GitHub, la vas a necesitar para validar LocalTunnel
+          echo "TU IP DE VERIFICACIÓN ES:"
+          curl -s ifconfig.me
+          echo ""
+          echo "=========================================================="
+          echo "ACTIVANDO ENLACE REMOTO CON LOCALTUNNEL..."
+          echo "=========================================================="
+          # Instalamos y corremos localtunnel apuntando al puerto 6080
+          sudo npm install -g localtunnel
+          lt --port 6080
