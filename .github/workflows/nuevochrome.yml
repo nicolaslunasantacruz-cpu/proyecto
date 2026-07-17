@@ -38,21 +38,19 @@ jobs:
           echo "=========================================================="
           touch url.txt
           
-          # Levantamos el túnel redirigiendo la salida
-          ssh -p 443 -R0:localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
+          # CORRECCIÓN: Usamos tls://localhost:6080 para que Pinggy entienda el certificado de Kasm
+          ssh -p 443 -R0:tls://localhost:6080 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 https+anonymous@a.pinggy.io > url.txt 2>&1 &
           
-          # TRUCO: Le damos 12 segundos completos para que negocie la conexión SSH y asigne el subdominio
           sleep 12
           
           echo "=========================================================="
           echo "TU NUEVO ENLACE DE ACCESO REMOTO ES:"
-          # Buscamos la URL generada en el archivo de texto
-          cat url.txt | grep -o 'https://[^ ]*\.pinggy\.link' | head -n 1
+          # Extraemos directamente la URL segura de los logs
+          grep -o 'https://[^ ]*\.link' url.txt | head -n 1
           echo "=========================================================="
           echo ""
           
-          # Imprimimos todo el archivo por si acaso necesitas revisar algún detalle extra
-          echo "Detalles de conexión:"
+          echo "Detalles de conexión en bruto:"
           cat url.txt
           
           sleep 21600
