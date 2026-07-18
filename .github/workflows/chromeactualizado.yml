@@ -1,4 +1,4 @@
-name: Nuevo Chrome con Audio y KasmVNC
+name: Nuevo Chrome con Audio Real (Kasm Desktop)
 
 on:
   workflow_dispatch:
@@ -10,12 +10,13 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Escritorio Virtual con Chrome Moderno y Audio
+      - name: Levantar Escritorio Virtual Completo con Audio y Chrome
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO UBUNTU VISUAL CON KASMVNC..."
+          echo "LEVANTANDO ENTORNO UBUNTU DESKTOP COMPLETO (CON AUDIO)..."
           echo "=========================================================="
           
+          # Usamos la imagen de escritorio completa que sí tiene soporte nativo de audio digital
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
@@ -23,10 +24,21 @@ jobs:
             -e VNC_PW=password \
             -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
-            kasmweb/chrome:1.15.0
+            kasmweb/ubuntu-jammy-desktop:1.15.0
 
           echo "=========================================================="
-          echo "INSTALANDO CLOUDFLARE..."
+          echo "INSTALANDO GOOGLE CHROME EN EL CONTENEDOR..."
+          echo "=========================================================="
+          # Esperamos unos segundos a que el contenedor responda e instalamos Chrome moderno dentro de él
+          sleep 10
+          docker exec -u 0 desktop bash -c "
+            apt-get update && \
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+            apt-get install -y ./google-chrome-stable_current_amd64.deb
+          "
+
+          echo "=========================================================="
+          echo "INSTALANDO CLOUDFLARE EN EL RUNNER..."
           echo "=========================================================="
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
@@ -34,16 +46,13 @@ jobs:
           echo "=========================================================="
           echo "INICIANDO TÚNEL Y ESPERANDO ENLACE VALIDO..."
           echo "=========================================================="
-          # Guardamos la salida del túnel en un archivo de texto
           cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
 
-          # Esperamos de forma segura a que Cloudflare conecte y escriba en el archivo
-          sleep 8
+          sleep 12
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
           echo "=========================================================="
-          # Filtramos de forma más precisa buscando la palabra trycloudflare.com
           cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
