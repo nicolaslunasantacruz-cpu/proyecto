@@ -1,4 +1,4 @@
-name: Chrome Ultra Rapido con Audio Real y VPN
+name: Chrome Estable con Audio Real y VPN
 
 on:
   workflow_dispatch:
@@ -10,46 +10,52 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Entorno Ligero con Audio y VPN
+      - name: Levantar Entorno y Asegurar Conexión sin Error 502
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO ALPINE ULTRA LIGERO..."
+          echo "1. LEVANTANDO CONTENEDOR DOCKER..."
           echo "=========================================================="
-          
-          # Usamos una imagen optimizada basada en Alpine/Debian ligero con noVNC y Audio por WebSockets
-          # El ID de Urban VPN ya queda listo para forzar su instalación
           docker run -d \
-            -p 8080:6901 \
+            -p 8443:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
-            -e ENABLE_AUDIO=true \
-            -e START_PULSEAUDIO=true \
-            -e CHROMIUM_FLAGS="--no-sandbox --disable-gpu --load-extension=/usr/share/urban-vpn" \
+            -e KASM_AUDIO=1 \
+            -e START_PULSEAUDIO=1 \
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "CONFIGURANDO EXTENSIÓN URBAN VPN..."
-          echo "=========================================================="
-          sleep 5
-          docker exec -u 0 desktop bash -c "
-            mkdir -p /etc/chromium/policies/managed && \
-            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/chromium/policies/managed/vpn.json
-          "
-
-          echo "=========================================================="
-          echo "INSTALANDO CLOUDFLARE EN EL RUNNER..."
+          echo "2. INSTALANDO CLOUDFLARE EN EL RUNNER..."
           echo "=========================================================="
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "INICIANDO TÚNEL EN HTTP PLANO (EVITA RESTRICCIONES DE AUDIO)..."
+          echo "3. INICIANDO TÚNEL INMEDIATAMENTE..."
           echo "=========================================================="
-          # Al usar http:// en el puerto 8080, el audio web no sufre bloqueos por certificados temporales
-          cloudflared tunnel --url http://localhost:8080 > cloudflare.log 2>&1 &
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
 
-          sleep 10
+          echo "=========================================================="
+          echo "4. ESPERANDO 30 SEGUNDOS PARA QUE EL SISTEMA ENCIENDA..."
+          echo "=========================================================="
+          # Este tiempo es crítico para que Kasm levante su servidor web interno antes de configurar el resto
+          sleep 30
+
+          echo "=========================================================="
+          echo "5. CONFIGURANDO EXTENSIÓN URBAN VPN Y PARCHES DE AUDIO..."
+          echo "=========================================================="
+          # Forzamos la instalación limpia de Urban VPN
+          docker exec -u 0 desktop bash -c "
+            mkdir -p /etc/chromium/policies/managed && \
+            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/chromium/policies/managed/vpn.json
+          "
+          
+          # Desmuteamos y subimos el volumen digital al 100%
+          docker exec -u 0 desktop bash -c "
+            pactl set-sink-mute @DEFAULT_SINK@ false 2>/dev/null || true && \
+            pactl set-sink-volume @DEFAULT_SINK@ 100% 2>/dev/null || true && \
+            amixer set Master unmute 100% 2>/dev/null || true
+          "
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
