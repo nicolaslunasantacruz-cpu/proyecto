@@ -16,29 +16,27 @@ jobs:
           echo "LEVANTANDO ENTORNO CON AUDIO POR SOFTWARE..."
           echo "=========================================================="
           
-          # Desactivamos el SSL interno para el audio
-          # Usamos las flags de Chrome en Kasm para auto-instalar la extensión de Urban VPN
-          # El ID 'pbiocdedecmfgjhjigcoijhmneicffof' corresponde a Urban VPN en la Chrome Web Store
+          # Mantenemos los puertos e infraestructura estables de Kasm
+          # Eliminamos conflictos de proxies internos para asegurar el arranque directo
           docker run -d \
-            -p 8080:6901 \
+            -p 8443:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
             -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
-            -e KASM_SSL_PROXY=1 \
-            -e CHROME_ARGS="--disable-gpu --no-sandbox --load-extension=/usr/share/urban-vpn" \
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "INSTALANDO EXTENSIÓN URBAN VPN EN CHROME..."
+          echo "CONFIGURANDO EXTENSIÓN URBAN VPN EN CHROME..."
           echo "=========================================================="
+          # Le damos un momento al contenedor para crear sus carpetas internas
           sleep 10
           
-          # Forzamos la instalación de la extensión usando las políticas del sistema de Chrome dentro del contenedor
+          # Forzamos la instalación limpia de Urban VPN usando las políticas maestras de Chromium
           docker exec -u 0 desktop bash -c "
-            mkdir -p /etc/opt/chrome/policies/recommended && \
-            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/opt/chrome/policies/recommended/vpn.json
+            mkdir -p /etc/chromium/policies/managed && \
+            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/chromium/policies/managed/vpn.json
           "
 
           echo "=========================================================="
@@ -48,11 +46,14 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "INICIANDO TÚNEL HTTP SEGURO..."
+          echo "INICIANDO TÚNEL HTTP SEGURO Y ESPERANDO ARRANQUE..."
           echo "=========================================================="
-          cloudflared tunnel --url http://localhost:8080 &> cloudflare.log &
+          # Volvemos a apuntar de forma segura al puerto HTTPS nativo (8443) con verificación omitida
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
 
-          sleep 12
+          # Damos un colchón de tiempo generoso (20 segundos) para que el servidor web de Kasm 
+          # termine de iniciar antes de que intentes abrir el enlace. Esto evita el Error 502.
+          sleep 20
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
