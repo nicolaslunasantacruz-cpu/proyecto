@@ -16,14 +16,14 @@ jobs:
           echo "LEVANTANDO ENTORNO UBUNTU VISUAL CON KASMVNC..."
           echo "=========================================================="
           
-          # Levantamos el contenedor oficial de Kasm con Chrome moderno.
-          # Eliminamos --device /dev/snd para evitar el error en los servidores de GitHub.
-          # START_PULSEAUDIO=1 obliga al sistema a crear una tarjeta de sonido virtual interna.
+          # Añadimos las variables de entorno nativas de Kasm para forzar el puente de audio (KASM_AUDIO=1)
+          # Mantenemos las capacidades normales sin requerir hardware físico real.
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
+            -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
             kasmweb/chrome:1.15.0
 
