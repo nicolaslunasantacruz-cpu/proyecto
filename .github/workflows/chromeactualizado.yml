@@ -34,23 +34,17 @@ jobs:
           echo "=========================================================="
           echo "INICIANDO TÚNEL Y ESPERANDO ENLACE VALIDO..."
           echo "=========================================================="
-          # Guardamos la salida del túnel en un archivo de texto para poder leer el enlace
+          # Guardamos la salida del túnel en un archivo de texto
           cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
 
-          # Esperamos hasta 30 segundos a que Cloudflare genere y registre el dominio correctamente
-          for i in {1..15}; do
-            if grep -q "trycloudflare.com" cloudflare.log; then
-              echo "¡Túnel creado con éxito!"
-              break
-            fi
-            sleep 2
-          done
+          # Esperamos de forma segura a que Cloudflare conecte y escriba en el archivo
+          sleep 8
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
           echo "=========================================================="
-          # Extrae la URL exacta del archivo de registro para que solo tengas que hacer clic
-          grep -o 'https://[^ ]*trycloudflare.com' cloudflare.log | head -n 1
+          # Filtramos de forma más precisa buscando la palabra trycloudflare.com
+          cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
           # Mantenemos vivo el entorno por un límite seguro de casi 6 horas (5.8 horas)
