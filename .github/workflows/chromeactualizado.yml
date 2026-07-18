@@ -16,8 +16,6 @@ jobs:
           echo "LEVANTANDO ENTORNO UBUNTU VISUAL CON KASMVNC..."
           echo "=========================================================="
           
-          # Añadimos las variables de entorno nativas de Kasm para forzar el puente de audio (KASM_AUDIO=1)
-          # Mantenemos las capacidades normales sin requerir hardware físico real.
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
@@ -28,23 +26,32 @@ jobs:
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "ESPERANDO QUE EL SISTEMA INICIE..."
-          echo "=========================================================="
-          sleep 15
-
-          echo "=========================================================="
-          echo "ACTIVANDO TÚNEL AUTOMÁTICO DE CLOUDFLARE..."
+          echo "INSTALANDO CLOUDFLARE..."
           echo "=========================================================="
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-          # Apuntamos al puerto 8443. Usamos --no-tls-verify porque Kasm usa HTTPS auto-firmado.
-          cloudflared tunnel --url https://localhost:8443 --no-tls-verify &
+          echo "=========================================================="
+          echo "INICIANDO TÚNEL Y ESPERANDO ENLACE VALIDO..."
+          echo "=========================================================="
+          # Guardamos la salida del túnel en un archivo de texto para poder leer el enlace
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
+
+          # Esperamos hasta 30 segundos a que Cloudflare genere y registre el dominio correctamente
+          for i in {1..15}; do
+            if grep -q "trycloudflare.com" cloudflare.log; then
+              echo "¡Túnel creado con éxito!"
+              break
+            fi
+            sleep 2
+          done
 
           echo "=========================================================="
-          echo "BUSCA TU ENLACE DE TRYCLOUDFLARE ABAJO:"
+          echo "TU ENLACE DE ACCESO ES:"
           echo "=========================================================="
-          sleep 10
+          # Extrae la URL exacta del archivo de registro para que solo tengas que hacer clic
+          grep -o 'https://[^ ]*trycloudflare.com' cloudflare.log | head -n 1
+          echo "=========================================================="
           
           # Mantenemos vivo el entorno por un límite seguro de casi 6 horas (5.8 horas)
           sleep 21000
