@@ -1,4 +1,4 @@
-name: Nuevo Chrome con Audio Real (Kasm Desktop)
+name: Nuevo Chrome con Audio Definitivo (Kasm Core)
 
 on:
   workflow_dispatch:
@@ -10,12 +10,13 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Escritorio Virtual Completo con Audio y Chrome
+      - name: Levantar Entorno Kasm Core con Audio Habilitado
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO UBUNTU DESKTOP COMPLETO (CON AUDIO)..."
+          echo "LEVANTANDO ENTORNO KASM CORE CON MULTIMEDIA..."
           echo "=========================================================="
           
+          # Usamos la imagen Core oficial que tiene mejor compatibilidad de módulos web
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
@@ -23,14 +24,19 @@ jobs:
             -e VNC_PW=password \
             -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
-            kasmweb/ubuntu-jammy-desktop:1.15.0
+            -e KASM_AUDIO_PORTS=8443 \
+            kasmweb/core-ubuntu-jammy:1.15.0
 
           echo "=========================================================="
-          echo "INSTALANDO GOOGLE CHROME EN EL CONTENEDOR..."
+          echo "CONFIGURANDO SERVICIO DE AUDIO E INSTALANDO CHROME..."
           echo "=========================================================="
-          sleep 10
-          # Descargamos e instalamos Chrome directamente usando dpkg e instalando dependencias con -f
+          sleep 12
+          
+          # Forzamos al contenedor a inicializar el demonio de audio nativo de Kasm
+          # Luego instalamos Google Chrome de forma limpia
           docker exec -u 0 desktop bash -c "
+            apt-get update && \
+            apt-get install -y pulseaudio pavucontrol && \
             wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
             dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -y -f
           "
