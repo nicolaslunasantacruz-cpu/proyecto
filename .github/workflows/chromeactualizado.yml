@@ -1,4 +1,4 @@
-name: Nuevo Chrome con Audio Definitivo (Kasm Core)
+name: Chrome Moderno con Audio Real Funcionando
 
 on:
   workflow_dispatch:
@@ -10,36 +10,27 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Entorno Kasm Core con Audio Habilitado
+      - name: Levantar Escritorio Virtual con Chrome Moderno y Audio
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO KASM CORE CON MULTIMEDIA..."
+          echo "LEVANTANDO ENTORNO CON AUDIO POR SOFTWARE..."
           echo "=========================================================="
           
-          # Usamos la imagen Core oficial que tiene mejor compatibilidad de módulos web
+          # Levantamos una imagen con entorno de escritorio completo y Chrome moderno
+          # Configuramos el entorno para inicializar PulseAudio interno
           docker run -d \
-            -p 8443:6901 \
+            -p 8080:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
-            -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
-            -e KASM_AUDIO_PORTS=8443 \
-            kasmweb/core-ubuntu-jammy:1.15.0
+            -e ENABLE_AUDIO=true \
+            kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "CONFIGURANDO SERVICIO DE AUDIO E INSTALANDO CHROME..."
+          echo "ESPERANDO QUE EL SISTEMA INICIE..."
           echo "=========================================================="
-          sleep 12
-          
-          # Forzamos al contenedor a inicializar el demonio de audio nativo de Kasm
-          # Luego instalamos Google Chrome de forma limpia
-          docker exec -u 0 desktop bash -c "
-            apt-get update && \
-            apt-get install -y pulseaudio pavucontrol && \
-            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-            dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -y -f
-          "
+          sleep 15
 
           echo "=========================================================="
           echo "INSTALANDO CLOUDFLARE EN EL RUNNER..."
@@ -50,7 +41,8 @@ jobs:
           echo "=========================================================="
           echo "INICIANDO TÚNEL Y ESPERANDO ENLACE VALIDO..."
           echo "=========================================================="
-          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
+          # Apuntamos al puerto seguro 8080 del contenedor
+          cloudflared tunnel --url https://localhost:8080 --no-tls-verify > cloudflare.log 2>&1 &
 
           sleep 12
 
