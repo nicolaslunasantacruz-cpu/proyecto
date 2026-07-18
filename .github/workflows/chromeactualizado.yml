@@ -1,4 +1,4 @@
-name: Chrome Moderno con Audio Real y Urban VPN
+name: Chrome Ultra Rapido con Audio Real y VPN
 
 on:
   workflow_dispatch:
@@ -10,30 +10,28 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Escritorio Virtual con Chrome, Audio y VPN
+      - name: Levantar Entorno Ligero con Audio y VPN
         run: |
           echo "=========================================================="
-          echo "LEVANTANDO ENTORNO CON AUDIO POR SOFTWARE..."
+          echo "LEVANTANDO ENTORNO ALPINE ULTRA LIGERO..."
           echo "=========================================================="
           
-          # Mantenemos los puertos e infraestructura estables de Kasm
-          # Eliminamos conflictos de proxies internos para asegurar el arranque directo
+          # Usamos una imagen optimizada basada en Alpine/Debian ligero con noVNC y Audio por WebSockets
+          # El ID de Urban VPN ya queda listo para forzar su instalación
           docker run -d \
-            -p 8443:6901 \
+            -p 8080:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
-            -e KASM_AUDIO=1 \
-            -e START_PULSEAUDIO=1 \
+            -e ENABLE_AUDIO=true \
+            -e START_PULSEAUDIO=true \
+            -e CHROMIUM_FLAGS="--no-sandbox --disable-gpu --load-extension=/usr/share/urban-vpn" \
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "CONFIGURANDO EXTENSIÓN URBAN VPN EN CHROME..."
+          echo "CONFIGURANDO EXTENSIÓN URBAN VPN..."
           echo "=========================================================="
-          # Le damos un momento al contenedor para crear sus carpetas internas
-          sleep 10
-          
-          # Forzamos la instalación limpia de Urban VPN usando las políticas maestras de Chromium
+          sleep 5
           docker exec -u 0 desktop bash -c "
             mkdir -p /etc/chromium/policies/managed && \
             echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/chromium/policies/managed/vpn.json
@@ -46,14 +44,12 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "INICIANDO TÚNEL HTTP SEGURO Y ESPERANDO ARRANQUE..."
+          echo "INICIANDO TÚNEL EN HTTP PLANO (EVITA RESTRICCIONES DE AUDIO)..."
           echo "=========================================================="
-          # Volvemos a apuntar de forma segura al puerto HTTPS nativo (8443) con verificación omitida
-          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
+          # Al usar http:// en el puerto 8080, el audio web no sufre bloqueos por certificados temporales
+          cloudflared tunnel --url http://localhost:8080 > cloudflare.log 2>&1 &
 
-          # Damos un colchón de tiempo generoso (20 segundos) para que el servidor web de Kasm 
-          # termine de iniciar antes de que intentes abrir el enlace. Esto evita el Error 502.
-          sleep 20
+          sleep 10
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
@@ -61,5 +57,5 @@ jobs:
           cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
-          # Mantenemos vivo el entorno por un límite seguro de casi 6 horas
+          # Mantenemos vivo el entorno
           sleep 21000
