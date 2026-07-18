@@ -1,4 +1,4 @@
-name: Chrome Moderno con Audio Real Funcionando
+name: Chrome Moderno con Audio Real (Modo TCP)
 
 on:
   workflow_dispatch:
@@ -16,15 +16,15 @@ jobs:
           echo "LEVANTANDO ENTORNO CON AUDIO POR SOFTWARE..."
           echo "=========================================================="
           
-          # Levantamos una imagen con entorno de escritorio completo y Chrome moderno
-          # Configuramos el entorno para inicializar PulseAudio interno
+          # Levantamos el contenedor original de Kasm Chrome.
+          # Usamos el puerto 6901 interno mapeado al 8443 local.
           docker run -d \
-            -p 8080:6901 \
+            -p 8443:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
+            -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
-            -e ENABLE_AUDIO=true \
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
@@ -39,16 +39,18 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "INICIANDO TÚNEL Y ESPERANDO ENLACE VALIDO..."
+          echo "INICIANDO TÚNEL TCP EN SEGUNDO PLANO..."
           echo "=========================================================="
-          # Apuntamos al puerto seguro 8080 del contenedor
-          cloudflared tunnel --url https://localhost:8080 --no-tls-verify > cloudflare.log 2>&1 &
+          # CAMBIO CLAVE: Usamos el protocolo TCP directo. 
+          # Esto evita que Cloudflare rompa el flujo de audio web de Kasm.
+          cloudflared tunnel --url tcp://localhost:8443 > cloudflare.log 2>&1 &
 
           sleep 12
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
           echo "=========================================================="
+          # Extraemos la URL generada
           cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
