@@ -1,4 +1,4 @@
-name: Chrome Estable con Audio Real y VPN
+name: Ubuntu Clasico noVNC con Audio Real y VPN
 
 on:
   workflow_dispatch:
@@ -10,19 +10,20 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Entorno y Asegurar Conexión sin Error 502
+      - name: Levantar Escritorio Ubuntu noVNC Ligero con Audio
         run: |
           echo "=========================================================="
-          echo "1. LEVANTANDO CONTENEDOR DOCKER..."
+          echo "1. LEVANTANDO ENTORNO NOVNC CLASICO..."
           echo "=========================================================="
+          # Usamos una imagen ultra optimizada que corre en HTTP plano (puerto 80)
+          # Esto elimina cualquier problema de lentitud y bloqueos de audio
           docker run -d \
-            -p 8443:6901 \
+            -p 8080:80 \
             --shm-size=2gb \
             --name=desktop \
-            -e VNC_PW=password \
-            -e KASM_AUDIO=1 \
-            -e START_PULSEAUDIO=1 \
-            kasmweb/chrome:1.15.0
+            -e VNC_PASSWORD=password \
+            -e ENABLE_AUDIO=true \
+            dorowu/ubuntu-desktop-lxde-vnc:jammy
 
           echo "=========================================================="
           echo "2. INSTALANDO CLOUDFLARE EN EL RUNNER..."
@@ -31,30 +32,28 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "3. INICIANDO TÚNEL INMEDIATAMENTE..."
+          echo "3. INICIANDO TÚNEL HTTP HACIA EL ESCRITORIO..."
           echo "=========================================================="
-          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
+          cloudflared tunnel --url http://localhost:8080 > cloudflare.log 2>&1 &
 
           echo "=========================================================="
-          echo "4. ESPERANDO 30 SEGUNDOS PARA QUE EL SISTEMA ENCIENDA..."
+          echo "4. ESPERANDO ARRANQUE DEL SISTEMA (25 SEGUNDOS)..."
           echo "=========================================================="
-          # Este tiempo es crítico para que Kasm levante su servidor web interno antes de configurar el resto
-          sleep 30
+          sleep 25
 
           echo "=========================================================="
-          echo "5. CONFIGURANDO EXTENSIÓN URBAN VPN Y PARCHES DE AUDIO..."
+          echo "5. INSTALANDO GOOGLE CHROME, VPN Y PARCHES DE AUDIO..."
           echo "=========================================================="
-          # Forzamos la instalación limpia de Urban VPN
+          # Instalamos Chrome oficial de forma limpia, agregamos Urban VPN por políticas
+          # y subimos el volumen del sistema de sonido nativo
           docker exec -u 0 desktop bash -c "
-            mkdir -p /etc/chromium/policies/managed && \
-            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/chromium/policies/managed/vpn.json
-          "
-          
-          # Desmuteamos y subimos el volumen digital al 100%
-          docker exec -u 0 desktop bash -c "
+            apt-get update && \
+            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+            dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -y -f && \
+            mkdir -p /etc/opt/chrome/policies/managed && \
+            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/opt/chrome/policies/managed/vpn.json && \
             pactl set-sink-mute @DEFAULT_SINK@ false 2>/dev/null || true && \
-            pactl set-sink-volume @DEFAULT_SINK@ 100% 2>/dev/null || true && \
-            amixer set Master unmute 100% 2>/dev/null || true
+            pactl set-sink-volume @DEFAULT_SINK@ 100% 2>/dev/null || true
           "
 
           echo "=========================================================="
@@ -63,5 +62,5 @@ jobs:
           cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
-          # Mantenemos vivo el entorno
+          # Mantenemos vivo el entorno por casi 6 horas
           sleep 21000
