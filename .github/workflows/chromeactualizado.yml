@@ -1,4 +1,4 @@
-name: Chrome Moderno con Audio Real Funcionando
+name: Chrome Moderno con Audio Real y Urban VPN
 
 on:
   workflow_dispatch:
@@ -10,27 +10,36 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Escritorio Virtual con Chrome Moderno y Audio
+      - name: Levantar Escritorio Virtual con Chrome, Audio y VPN
         run: |
           echo "=========================================================="
           echo "LEVANTANDO ENTORNO CON AUDIO POR SOFTWARE..."
           echo "=========================================================="
           
-          # Levantamos la imagen oficial de Chrome de Kasm
-          # KASM_AUDIO=1 y START_PULSEAUDIO=1 crean la tarjeta virtual de sonido
+          # Desactivamos el SSL interno para el audio
+          # Usamos las flags de Chrome en Kasm para auto-instalar la extensión de Urban VPN
+          # El ID 'pbiocdedecmfgjhjigcoijhmneicffof' corresponde a Urban VPN en la Chrome Web Store
           docker run -d \
-            -p 8443:6901 \
+            -p 8080:6901 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PW=password \
             -e KASM_AUDIO=1 \
             -e START_PULSEAUDIO=1 \
+            -e KASM_SSL_PROXY=1 \
+            -e CHROME_ARGS="--disable-gpu --no-sandbox --load-extension=/usr/share/urban-vpn" \
             kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "ESPERANDO QUE EL SISTEMA INICIE..."
+          echo "INSTALANDO EXTENSIÓN URBAN VPN EN CHROME..."
           echo "=========================================================="
-          sleep 15
+          sleep 10
+          
+          # Forzamos la instalación de la extensión usando las políticas del sistema de Chrome dentro del contenedor
+          docker exec -u 0 desktop bash -c "
+            mkdir -p /etc/opt/chrome/policies/recommended && \
+            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/opt/chrome/policies/recommended/vpn.json
+          "
 
           echo "=========================================================="
           echo "INSTALANDO CLOUDFLARE EN EL RUNNER..."
@@ -39,10 +48,9 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "INICIANDO TÚNEL HTTP CON SOPORTE WEBSOCKET..."
+          echo "INICIANDO TÚNEL HTTP SEGURO..."
           echo "=========================================================="
-          # Volvemos a HTTPS para que cargue la web, manteniendo --no-tls-verify
-          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
+          cloudflared tunnel --url http://localhost:8080 &> cloudflare.log &
 
           sleep 12
 
