@@ -1,4 +1,4 @@
-name: Ubuntu Manual noVNC con Audio Real y VPN
+name: Navegador Ultra Rapido Sin Audio - Maxima Optimizacion
 
 on:
   workflow_dispatch:
@@ -10,62 +10,45 @@ jobs:
   run-browser:
     runs-on: ubuntu-latest
     steps:
-      - name: Levantar Entorno Base Oficial de Ubuntu
+      - name: Levantar Chrome Kasm al Máximo Rendimiento
         run: |
           echo "=========================================================="
-          echo "1. LEVANTANDO IMAGEN OFICIAL BASE..."
+          echo "LEVANTANDO NAVEGADOR EN MODO ULTRA RÁPIDO..."
           echo "=========================================================="
+          
+          # Arrancamos Kasm desactivando por completo el audio y PulseAudio
+          # Esto libera casi todo el procesador para que vaya súper fluido
           docker run -d \
-            -p 8080:8080 \
-            --shm-size=2gb \
+            -p 8443:6901 \
+            --shm-size=4gb \
             --name=desktop \
-            ubuntu:22.04 sleep infinity
+            -e VNC_PW=password \
+            -e KASM_AUDIO=0 \
+            -e START_PULSEAUDIO=0 \
+            kasmweb/chrome:1.15.0
 
           echo "=========================================================="
-          echo "2. INSTALANDO ENTORNO, CHROME, AUDIO Y NOVNC..."
+          echo "INSTALANDO EXTENSIÓN URBAN VPN..."
           echo "=========================================================="
+          sleep 8
+          
+          # Forzamos la instalación limpia de Urban VPN por políticas de Chrome
           docker exec -u 0 desktop bash -c "
-            export DEBIAN_FRONTEND=noninteractive && \
-            apt-get update && \
-            apt-get install -y xfce4 xfce4-goodies x11vnc xvfb wget python3 python3-pip pulseaudio pavucontrol alsa-utils git dbus-x11 && \
-            git clone https://github.com/novnc/noVNC.git /opt/noVNC && \
-            git clone https://github.com/novnc/websockify /opt/noVNC/utils/websockify && \
-            cp /opt/noVNC/vnc.html /opt/noVNC/index.html && \
-            wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-            dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -y -f && \
-            mkdir -p /etc/opt/chrome/policies/managed && \
-            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/opt/chrome/policies/managed/vpn.json
+            mkdir -p /etc/chromium/policies/managed && \
+            echo '{ \"ExtensionInstallForcelist\": [ \"pbiocdedecmfgjhjigcoijhmneicffof;https://clients2.google.com/service/update2/crx\" ] }' > /etc/chromium/policies/managed/vpn.json
           "
 
           echo "=========================================================="
-          echo "3. INICIANDO INTERFAZ GRAFICA Y AUDIO INTERNO..."
-          echo "=========================================================="
-          # Creamos un script de arranque que inicializa dbus correctamente para evitar la pantalla negra
-          docker exec -d -u 0 desktop bash -c "
-            export DISPLAY=:1 && \
-            Xvfb :1 -screen 0 1280x720x24 & \
-            sleep 3 || true && \
-            dbus-launch --exit-with-session startxfce4 & \
-            sleep 3 || true && \
-            x11vnc -display :1 -nopw -listen localhost -xkb -forever & \
-            pulseaudio --start --exit-idle-time=-1 || true && \
-            pactl set-sink-mute @DEFAULT_SINK@ false 2>/dev/null || true && \
-            pactl set-sink-volume @DEFAULT_SINK@ 100% 2>/dev/null || true && \
-            /opt/noVNC/utils/novnc_proxy --vnc localhost:5900 --listen 8080
-          "
-
-          echo "=========================================================="
-          echo "4. INSTALANDO CLOUDFLARE EN EL RUNNER..."
+          echo "CONECTANDO TÚNEL DE ACCESO..."
           echo "=========================================================="
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-          echo "=========================================================="
-          echo "5. INICIANDO TÚNEL HTTP..."
-          echo "=========================================================="
-          cloudflared tunnel --url http://localhost:8080 > cloudflare.log 2>&1 &
+          # Iniciamos el túnel directo al puerto nativo seguro
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
 
-          sleep 15
+          # Un respiro de 12 segundos para que el túnel se enlace bien
+          sleep 12
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
