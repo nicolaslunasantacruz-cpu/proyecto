@@ -1,4 +1,4 @@
-name: Chrome Moderno con Audio Real (Modo TCP)
+name: Chrome Moderno con Audio Real Funcionando
 
 on:
   workflow_dispatch:
@@ -16,8 +16,8 @@ jobs:
           echo "LEVANTANDO ENTORNO CON AUDIO POR SOFTWARE..."
           echo "=========================================================="
           
-          # Levantamos el contenedor original de Kasm Chrome.
-          # Usamos el puerto 6901 interno mapeado al 8443 local.
+          # Levantamos la imagen oficial de Chrome de Kasm
+          # KASM_AUDIO=1 y START_PULSEAUDIO=1 crean la tarjeta virtual de sonido
           docker run -d \
             -p 8443:6901 \
             --shm-size=2gb \
@@ -39,20 +39,18 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb
 
           echo "=========================================================="
-          echo "INICIANDO TÚNEL TCP EN SEGUNDO PLANO..."
+          echo "INICIANDO TÚNEL HTTP CON SOPORTE WEBSOCKET..."
           echo "=========================================================="
-          # CAMBIO CLAVE: Usamos el protocolo TCP directo. 
-          # Esto evita que Cloudflare rompa el flujo de audio web de Kasm.
-          cloudflared tunnel --url tcp://localhost:8443 > cloudflare.log 2>&1 &
+          # Volvemos a HTTPS para que cargue la web, manteniendo --no-tls-verify
+          cloudflared tunnel --url https://localhost:8443 --no-tls-verify > cloudflare.log 2>&1 &
 
           sleep 12
 
           echo "=========================================================="
           echo "TU ENLACE DE ACCESO ES:"
           echo "=========================================================="
-          # Extraemos la URL generada
           cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
-          # Mantenemos vivo el entorno por un límite seguro de casi 6 horas (5.8 horas)
+          # Mantenemos vivo el entorno por un límite seguro de casi 6 horas
           sleep 21000
