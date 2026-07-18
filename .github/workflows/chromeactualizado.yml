@@ -13,17 +13,16 @@ jobs:
       - name: Levantar Escritorio Ubuntu noVNC Ligero con Audio
         run: |
           echo "=========================================================="
-          echo "1. LEVANTANDO ENTORNO NOVNC CLASICO..."
+          echo "1. LEVANTANDO ENTORNO NOVNC CON AUDIO..."
           echo "=========================================================="
-          # Usamos una imagen ultra optimizada que corre en HTTP plano (puerto 80)
-          # Esto elimina cualquier problema de lentitud y bloqueos de audio
+          # Usamos una imagen con PulseAudio y noVNC web listo en el puerto 80
           docker run -d \
             -p 8080:80 \
             --shm-size=2gb \
             --name=desktop \
             -e VNC_PASSWORD=password \
-            -e ENABLE_AUDIO=true \
-            dorowu/ubuntu-desktop-lxde-vnc:jammy
+            -e SSL_PORT=none \
+            fradelg/ubuntu-fluxbox-novnc:latest
 
           echo "=========================================================="
           echo "2. INSTALANDO CLOUDFLARE EN EL RUNNER..."
@@ -44,10 +43,10 @@ jobs:
           echo "=========================================================="
           echo "5. INSTALANDO GOOGLE CHROME, VPN Y PARCHES DE AUDIO..."
           echo "=========================================================="
-          # Instalamos Chrome oficial de forma limpia, agregamos Urban VPN por políticas
-          # y subimos el volumen del sistema de sonido nativo
+          # Instalamos Chrome y la política para Urban VPN
           docker exec -u 0 desktop bash -c "
             apt-get update && \
+            apt-get install -y wget pulseaudio pavucontrol alsa-utils && \
             wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
             dpkg -i google-chrome-stable_current_amd64.deb || apt-get install -y -f && \
             mkdir -p /etc/opt/chrome/policies/managed && \
@@ -62,5 +61,5 @@ jobs:
           cat cloudflare.log | grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" | head -n 1
           echo "=========================================================="
           
-          # Mantenemos vivo el entorno por casi 6 horas
+          # Mantenemos vivo el entorno
           sleep 21000
